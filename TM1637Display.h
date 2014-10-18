@@ -17,6 +17,7 @@
 #ifndef __TM1637DISPLAY__
 #define __TM1637DISPLAY__
 
+#include "Arduino.h"
 #include <inttypes.h>
 
 #define SEG_A   0b00000001
@@ -45,6 +46,18 @@ public:
   //! @param brightness A number from 0 (lowes brightness) to 7 (highest brightness)
   void setBrightness(uint8_t brightness);
   
+  //! display float
+  void showNumber(float number, int decPlaces = 1);
+  
+  //! display text
+  void showText(char* text);
+  //! display text
+  void showText(String text);
+  //! is character corresponding to special segment on display
+  boolean isSpecialSegmentCharacter(char c);
+  //! convert character to segment
+  uint8_t charToSegment(char c);
+  
   //! Display arbitrary data on the module
   //!
   //! This function receives raw segment values as input and displays them. The segment data
@@ -58,19 +71,7 @@ public:
   //! @param length The number of digits to be modified
   //! @param pos The position from which to start the modification (0 - leftmost, 3 - rightmost)
   void setSegments(const uint8_t segments[], uint8_t length = 4, uint8_t pos = 0);
-  
-  //! Displayes a decimal number
-  //!
-  //! Dispalyes the given argument as a decimal number
-  //!
-  //! @param num The number to be shown
-  //! @param leading_zero When true, leading zeros are displayed. Otherwise unnecessary digits are
-  //!        blank
-  //! @param length The number of digits to set. The user must ensure that the number to be shown
-  //!        fits to the number of digits requested (for example, if two digits are to be displayed,
-  //!        the number must be between 0 to 99)
-  //! @param pos The position least significant digit (0 - leftmost, 3 - rightmost)
-  void showNumberDec(int num, bool leading_zero = false, uint8_t length = 4, uint8_t pos = 0);
+ 
   
   //! Translate a single digit into 7 segment code
   //!

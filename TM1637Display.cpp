@@ -22,39 +22,10 @@ extern "C" {
 }
 
 #include <TM1637Display.h>
-#include <Arduino.h>
 
 #define TM1637_I2C_COMM1    0x40
 #define TM1637_I2C_COMM2    0xC0
 #define TM1637_I2C_COMM3    0x80
-
-//
-//      A
-//     ---
-//  F |   | B
-//     -G-
-//  E |   | C
-//     ---
-//      D
-const uint8_t digitToSegment[] = {
- // XGFEDCBA
-  0b00111111,    // 0
-  0b00000110,    // 1
-  0b01011011,    // 2
-  0b01001111,    // 3
-  0b01100110,    // 4
-  0b01101101,    // 5
-  0b01111101,    // 6
-  0b00000111,    // 7
-  0b01111111,    // 8
-  0b01101111,    // 9
-  0b01110111,    // A
-  0b01111100,    // b
-  0b00111001,    // C
-  0b01011110,    // d
-  0b01111001,    // E
-  0b01110001     // F
-  };
 
 
 TM1637Display::TM1637Display(uint8_t pinClk, uint8_t pinDIO)
@@ -75,6 +46,84 @@ void TM1637Display::setBrightness(uint8_t brightness)
 {
 	m_brightness = brightness;
 }
+
+
+//-- api for displaying various types
+
+void TM1637Display::showNumber(float number,int decPlaces){
+   char buffer[7];  
+   dtostrf(number, 0, decPlaces, buffer);
+   showText(buffer);
+}
+
+void TM1637Display::showText(String text){
+   int textLength = text.length() + 1;
+   char char_array[textLength];
+   text.toCharArray(char_array, textLength);
+   showText(char_array);
+}
+
+void TM1637Display::showText(char* text)
+{
+  uint8_t segmentArr[4];
+  int arrSize = 4;
+  int segmentIndex = -1;
+  for(int i=0; i < arrSize; i++)
+     segmentArr[i] = 0;
+  for(int i=0; i< strlen(text) && segmentIndex < arrSize; i++)
+  {
+    char c = text[i];
+    if(isSpecialSegmentCharacter(c)){
+       if(segmentIndex>=0)
+         segmentArr[segmentIndex] |= 0b10000000;
+    }
+    else{
+       segmentIndex++;
+       segmentArr[segmentIndex] = charToSegment(c);
+    }
+  }
+  setSegments(segmentArr);
+}
+
+//TODO: change to some hashtable
+uint8_t TM1637Display::charToSegment(char c)
+{
+  //
+  //      A
+  //     ---
+  //  F |   | B
+  //     -G-
+  //  E |   | C
+  //     ---
+  //      D
+  if(c == '0') return 0b00111111;    // 0
+  if(c == '1') return 0b00000110;    // 1
+  if(c == '2') return 0b01011011;   // 2
+  if(c == '3') return 0b01001111;    // 3
+  if(c == '4') return 0b01100110;    // 4
+  if(c == '5') return 0b01101101;    // 5
+  if(c == '6') return 0b01111101;   // 6
+  if(c == '7') return 0b00000111;    // 7
+  if(c == '8') return 0b01111111;    // 8
+  if(c == '9') return 0b01101111;    // 9
+  if(c == '-') return 0b01000000;
+  if(c == 'A') return 0b01110111;    // A
+  if(c == 'b') return 0b01111100;    // b
+  if(c == 'C') return 0b00111001;   // C
+  if(c == 'd') return 0b01011110;    // d
+  if(c == 'E') return 0b01111001;    // E
+  if(c == 'F') return 0b01110001;    // F
+  if(isSpecialSegmentCharacter(c))
+     return 0b10000000;
+  return 0;
+}
+
+boolean TM1637Display::isSpecialSegmentCharacter(char c)
+{
+  return c == '.' || c == ',' || c == ':' || c == ';';
+}
+
+//-- low level driver
 
 void TM1637Display::setSegments(const uint8_t segments[], uint8_t length, uint8_t pos)
 {
@@ -99,32 +148,6 @@ void TM1637Display::setSegments(const uint8_t segments[], uint8_t length, uint8_
 	stop();
 }
  
-void TM1637Display::showNumberDec(int num, bool leading_zero, uint8_t length, uint8_t pos)
-{
-	uint8_t digits[4];
-	const static int divisors[] = { 1, 10, 100, 1000 };
-	bool leading = true;
-	
-	for(int8_t k = 0; k < 4; k++) {
-	    int divisor = divisors[4 - 1 - k];
-		int d = num / divisor;
-		
-		if (d == 0) {
-		  if (leading_zero || !leading || (k == 3))
-		    digits[k] = encodeDigit(d);
-	      else
-		    digits[k] = 0;
-		}
-		else {
-			digits[k] = encodeDigit(d);
-			num -= d * divisor;
-			leading = false;
-		}
-	}
-	
-	setSegments(digits + (4 - length), length, pos);
-}
-
 void TM1637Display::bitDelay()
 {
 	delayMicroseconds(50);
@@ -191,10 +214,6 @@ bool TM1637Display::writeByte(uint8_t b)
   return ack;
 }
 
-uint8_t TM1637Display::encodeDigit(uint8_t digit)
-{
-	return digitToSegment[digit & 0x0f];
-}
 
    
 
